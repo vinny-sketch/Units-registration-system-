@@ -1,0 +1,146 @@
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+
+#define MAX_UNITS 10
+#define MAX_NAME_LEN 50
+#define MAX_UNIT_NAME_LEN 30
+
+typedef struct {
+    char unitCode[10];
+    char unitName[MAX_UNIT_NAME_LEN];
+} Unit;
+
+typedef struct {
+    int studentID;
+    char studentName[MAX_NAME_LEN];
+    int numUnits;
+    Unit units[MAX_UNITS];
+} Student;
+
+// Function prototypes
+void registerStudent();
+void displayAllRegistrations();
+void saveToFile(Student s);
+void loadFromFile();
+
+int main() {
+    int choice;
+
+    do {
+        printf("\n===== UNIT REGISTRATION SYSTEM =====\n");
+        printf("1. Register student units\n");
+        printf("2. Display all registrations\n");
+        printf("3. Exit\n");
+        printf("Enter your choice: ");
+        scanf("%d", &choice);
+        getchar(); // Consume newline left in input buffer
+
+        switch (choice) {
+            case 1:
+                registerStudent();
+                break;
+            case 2:
+                loadFromFile();
+                break;
+            case 3:
+                printf("Exiting the system.\n");
+                break;
+            default:
+                printf("Invalid choice. Try again.\n");
+        }
+    } while (choice != 3);
+
+    return 0;
+}
+
+// Function to register a student and their units
+void registerStudent() {
+    Student s;
+    printf("\nEnter student ID: ");
+    scanf("%d", &s.studentID);
+    getchar(); // Clear newline character
+
+    printf("Enter student name: ");
+    fgets(s.studentName, MAX_NAME_LEN, stdin);
+    s.studentName[strcspn(s.studentName, "\n")] = 0; // Remove newline
+
+    printf("How many units to register (Max %d)? ", MAX_UNITS);
+    scanf("%d", &s.numUnits);
+    getchar();
+
+    if (s.numUnits > MAX_UNITS || s.numUnits < 1) {
+        printf("Invalid number of units.\n");
+        return;
+    }
+
+    for (int i = 0; i < s.numUnits; i++) {
+        printf("\n--- Enter details for unit %d ---\n", i + 1);
+        printf("Unit code: ");
+        fgets(s.units[i].unitCode, sizeof(s.units[i].unitCode), stdin);
+        s.units[i].unitCode[strcspn(s.units[i].unitCode, "\n")] = 0;
+
+        printf("Unit name: ");
+        fgets(s.units[i].unitName, sizeof(s.units[i].unitName), stdin);
+        s.units[i].unitName[strcspn(s.units[i].unitName, "\n")] = 0;
+    }
+
+    saveToFile(s);
+    printf("Student registration successful.\n");
+}
+
+// Save student to file
+void saveToFile(Student s) {
+    FILE *fp = fopen("registrations.txt", "a");
+    if (!fp) {
+        printf("Error opening file.\n");
+        return;
+    }
+
+    fprintf(fp, "%d|%s|%d", s.studentID, s.studentName, s.numUnits);
+    for (int i = 0; i < s.numUnits; i++) {
+        fprintf(fp, "|%s,%s", s.units[i].unitCode, s.units[i].unitName);
+    }
+    fprintf(fp, "\n");
+
+    fclose(fp);
+}
+
+// Load and display students from file
+void loadFromFile() {
+    FILE *fp = fopen("registrations.txt", "r");
+    if (!fp) {
+        printf("No registration records found.\n");
+        return;
+    }
+
+    char line[1024];
+    printf("\n===== All Registrations =====\n");
+    while (fgets(line, sizeof(line), fp)) {
+        Student s;
+        char *token = strtok(line, "|");
+        s.studentID = atoi(token);
+
+        token = strtok(NULL, "|");
+        strcpy(s.studentName, token);
+
+        token = strtok(NULL, "|");
+        s.numUnits = atoi(token);
+
+        printf("\nStudent ID: %d\n", s.studentID);
+        printf("Student Name: %s\n", s.studentName);
+        printf("Registered Units:\n");
+
+        for (int i = 0; i < s.numUnits; i++) {
+            token = strtok(NULL, "|");
+            if (token != NULL) {
+                char *code = strtok(token, ",");
+                char *name = strtok(NULL, ",");
+
+                printf("  %s - %s\n", code, name);
+            }
+        }
+    }
+
+    fclose(fp);
+}
